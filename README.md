@@ -22,9 +22,31 @@ cp config.example.yaml config.yaml   # then edit it: your items + ntfy topic
 3. **Run:** `python -m searchlight watch`. Leave it running. `once` does a single pass.
 4. **Evidence:** `python -m searchlight report` writes `~/.searchlight/matches.html`, listing every match with links to its backup.
 
+## Running it on a Mac mini (recommended)
+
+A Mac at home is the best place for Searchlight. A home connection gets far fewer captchas than a cloud server. The Mac also has a real screen session, so the browser window is visible and you can log in to Facebook directly on it.
+
+```bash
+git clone <this repo> && cd Searchlight
+./scripts/install-macos.sh          # first run creates config.yaml: edit it, then run again
+./scripts/install-macos.sh login    # log in to Facebook in the window that opens, press Enter
+```
+
+The script installs everything into `.venv` and registers a background service that:
+- starts when you log in
+- restarts if it crashes
+- keeps the Mac awake while it runs
+
+The log is at `~/.searchlight/searchlight.log`. `./scripts/install-macos.sh uninstall` removes the service and keeps your data.
+
+Mac settings worth changing once (System Settings):
+- **General → Sharing → Screen Sharing: on.** When a captcha alert arrives, connect from another Mac (Finder → Network, or `vnc://<mac-mini-name>.local`) or from your phone (any VNC app, e.g. RealVNC Viewer). Solve it in the Searchlight window within 10 minutes.
+- **Energy → "Start up automatically after a power failure": on.** On some macOS versions, also turn on "Prevent automatic sleeping when the display is off".
+- **Users & Groups → Automatically log in as: your user.** The service runs in your login session, so it only starts again after a reboot if the Mac logs itself in. macOS hides this option while FileVault is on. Without it, you need to log in once after a restart.
+
 ## Running it on a server
 
-Do steps 1 and 2 on your laptop. Then, on the server:
+A Linux box or NAS works too, though a cloud server will likely get blocked (see below). Do steps 1 and 2 on your laptop. Then, on the server:
 
 ```bash
 git clone <this repo> && cd Searchlight
