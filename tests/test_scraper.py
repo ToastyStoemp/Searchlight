@@ -72,3 +72,4 @@ def test_tutti_card_merges_image_and_text_links(page):
     assert first.listing_id == "58123456"
     assert first.image == "https://c.tutti.ch/a.jpg"
     assert "Zürich" in first.text
+

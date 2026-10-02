@@ -33,10 +33,15 @@ enabled_sources: [ricardo, tutti, anibis, facebook]
 # Facebook Marketplace city slug, as in facebook.com/marketplace/<slug>/
 facebook_location: zurich
 
-interval_minutes: 20      # how often to check (each run is randomised ±20%)
-headless: false           # a visible browser gets far fewer captchas
-screenshot_matches: true  # save a full-page screenshot of each match (evidence)
-data_dir: ~/.searchlight  # database, browser profile, screenshots, report
+interval_minutes: 90        # how often to check (each run is randomised ±20%)
+active_hours: [7, 23]       # only search between 07:00 and 23:00
+search_delay_seconds: [20, 75]  # random pause between two searches
+headless: auto              # auto = no window on a server, visible on a desktop
+captcha_wait_minutes: 10    # with a visible window: time you get to solve a captcha
+block_cooldown_hours: 2     # a site that blocks is skipped 2 h, then 4 h, 8 h... (max 24 h)
+backup_matches: true        # save a full offline copy of every matching listing
+data_dir: ~/.searchlight    # database, backups, report, login session
+                            # (in Docker use: data_dir: /data)
 
 notify:
   # Easiest: install the free "ntfy" app on your phone and subscribe to a

@@ -27,38 +27,46 @@ class Notifier:
     def send(self, product: str, listing: Listing) -> None:
         title, body = _message(product, listing)
         log.warning("MATCH  %s | %s", title, body.replace("\n", " | "))
+        self._dispatch(title, body, listing.url, listing.image)
+
+    def send_text(self, title: str, body: str, url: str = "") -> None:
+        """A status message (e.g. a site is blocking us), not a match."""
+        self._dispatch(title, body, url, "", tags="warning", priority="default")
+
+    def _dispatch(self, title, body, url, image, tags="rotating_light", priority=None):
         for name, fn in (("ntfy", self._ntfy), ("telegram", self._telegram), ("email", self._email)):
             cfg = self.config.get(name)
             if not cfg:
                 continue
             try:
-                fn(cfg, title, body, listing)
+                fn(cfg, title, body, url, image, tags, priority)
             except Exception as exc:  # one broken channel shouldn't stop the others
                 log.error("Could not send %s notification: %s", name, exc)
 
-    def _ntfy(self, cfg, title, body, listing):
+    def _ntfy(self, cfg, title, body, url, image, tags, priority):
         server = cfg.get("server", "https://ntfy.sh").rstrip("/")
         headers = {
             "Title": title.encode("utf-8"),
-            "Click": listing.url,
-            "Tags": "rotating_light",
-            "Priority": str(cfg.get("priority", "high")),
+            "Tags": tags,
+            "Priority": str(priority or cfg.get("priority", "high")),
         }
-        if listing.image:
-            headers["Attach"] = listing.image
+        if url:
+            headers["Click"] = url
+        if image:
+            headers["Attach"] = image
         if cfg.get("token"):
             headers["Authorization"] = f"Bearer {cfg['token']}"
         requests.post(f"{server}/{cfg['topic']}", data=body.encode("utf-8"),
                       headers=headers, timeout=20).raise_for_status()
 
-    def _telegram(self, cfg, title, body, listing):
+    def _telegram(self, cfg, title, body, url, image, tags, priority):
         requests.post(
             f"https://api.telegram.org/bot{cfg['bot_token']}/sendMessage",
             json={"chat_id": cfg["chat_id"], "text": f"{title}\n\n{body}"},
             timeout=20,
         ).raise_for_status()
 
-    def _email(self, cfg, title, body, listing):
+    def _email(self, cfg, title, body, url, image, tags, priority):
         msg = EmailMessage()
         msg["Subject"] = title
         msg["From"] = cfg.get("from", cfg["username"])

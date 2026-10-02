@@ -1,8 +1,8 @@
 # Searchlight
 
-Searchlight watches Swiss second-hand marketplaces for your stolen gear. It checks **Ricardo, tutti.ch, anibis.ch and Facebook Marketplace** every ~20 minutes. When a new listing matches one of your items, it sends a push to your phone and saves a full-page screenshot as evidence.
+Searchlight watches Swiss second-hand marketplaces for your stolen gear. It checks **Ricardo, tutti.ch, anibis.ch and Facebook Marketplace** every ~90 minutes during the day. When a listing matches one of your items, it sends a push to your phone and **saves a complete offline copy of the listing**, so you still have it if the seller takes it down.
 
-It runs on your own computer in a real Chrome window. Ricardo, tutti and Facebook all block requests from servers and from plain scripts, and Facebook Marketplace only shows results when you're logged in.
+It drives a real Chromium browser, either visible on your desktop or invisible (headless) on a server. Facebook Marketplace only shows results when you're logged in, so you log in once on a computer with a screen and copy the session to the server.
 
 ## Setup (about 5 minutes)
 
@@ -18,11 +18,52 @@ cp config.example.yaml config.yaml   # then edit it: your items + ntfy topic
 ```
 
 1. **Phone alerts:** install the free [ntfy](https://ntfy.sh) app (iOS/Android). Subscribe to a long random topic name and put that same name under `notify.ntfy.topic`. Check it works with `python -m searchlight test-notify`.
-2. **Log in once:** `python -m searchlight login` opens a browser. Log in to Facebook and solve any captcha Ricardo or tutti shows, then press Enter. The browser profile is kept in `~/.searchlight/browser-profile`, so this lasts.
+2. **Log in to Facebook once:** `python -m searchlight login` opens a browser. Log in, accept the cookie banners, then press Enter. This writes `~/.searchlight/session.json` (skip this step if you don't want Facebook).
 3. **Run:** `python -m searchlight watch`. Leave it running. `once` does a single pass.
-4. **Evidence:** `python -m searchlight report` writes `~/.searchlight/matches.html`. It lists every match with the listing text, price, when it was found and a link to its screenshot.
+4. **Evidence:** `python -m searchlight report` writes `~/.searchlight/matches.html`, listing every match with links to its backup.
 
-Run it on a computer that stays on, such as an old laptop, a Mac mini or a Raspberry Pi with a desktop. A home internet connection gets far fewer captchas than a cloud server.
+## Running it on a server
+
+Do steps 1 and 2 on your laptop. Then, on the server:
+
+```bash
+git clone <this repo> && cd Searchlight
+mkdir data
+cp config.example.yaml data/config.yaml     # edit it, and set: data_dir: /data
+scp laptop:~/.searchlight/session.json data/ # only if you use Facebook
+docker compose up -d --build                 # runs `watch` and restarts on reboot
+docker compose logs -f                       # see what it's doing
+docker compose run --rm searchlight report   # writes data/matches.html
+```
+
+Without Docker, the steps from **Setup** work on a server too: install with `playwright install --with-deps chromium`. `headless: auto` notices there's no screen.
+
+- **Where the server is matters most.** Ricardo and tutti block many rented cloud servers (AWS, Hetzner, DigitalOcean...) outright, before any captcha. A computer at home works much better: a Raspberry Pi, a NAS that runs Docker, or an old laptop. If you do use a cloud server and a site keeps getting blocked, take that site out of `enabled_sources` there and rely on its built-in alert (below).
+- **The Facebook session lasts weeks, not forever.** Facebook may also ask you to confirm the "new device" the first time the server uses it. Approve it in the Facebook app. When Facebook starts showing the login page, you'll get a push. Then run `login` on your laptop again and copy the new `session.json`. Treat that file like a password.
+
+## When a site shows a captcha
+
+Searchlight doesn't try to trick or solve captchas. To avoid them, it checks politely: every ~90 minutes, only between 07:00 and 23:00, with a random 20-75 s pause between searches.
+
+If a site still shows a captcha or login page:
+- **On a desktop** (visible window): you get a push. Solve it in the window within 10 minutes and the search carries on.
+- **On a server:** the site is skipped for 2 hours, then 4, 8... up to 24 hours. You get a push each time it's blocked, and the other sites keep being checked. The pause resets as soon as a search on that site works again.
+
+All of this can be tuned in `config.yaml` (`interval_minutes`, `active_hours`, `search_delay_seconds`, `captcha_wait_minutes`, `block_cooldown_hours`).
+
+## Backups of matching listings
+
+For every match, Searchlight opens the listing and saves a folder under `~/.searchlight/backups/`:
+
+| File | What it is |
+|---|---|
+| `page.mhtml` | The whole page, photos included, in one file. Opens offline in Chrome or Edge, even after the listing is deleted. |
+| `screenshot.png` | Full-page screenshot. |
+| `images/` | Every listing photo at full size. |
+| `listing.json` | Title, price, the full page text (including the seller name and location when shown), the URL and the exact capture time. |
+| `page.html` | The raw HTML. |
+
+The card from the search results is saved first. If the listing page itself can't be loaded (a captcha, or it's already gone), you still keep the title, price, text and thumbnail.
 
 ## Describing your items
 
@@ -49,11 +90,11 @@ They're free and they cover listings even while your computer is off:
 | tutti.ch / anibis.ch | Search, then **"Suchabo"** (save search). It pushes new matches in the app. |
 | Facebook Marketplace | Search in the app, then the **bell / "Benachrichtigungen"** toggle at the top of the results. |
 
-Searchlight puts all sites in one place and adds price and keyword filtering on top. It also keeps the screenshot evidence, which matters because listings are often deleted quickly.
+Searchlight puts all sites in one place and adds price and keyword filtering on top. It also keeps backups of matches, which matters because listings are often deleted quickly.
 
 ## If you find your item
 
-- **Don't confront the seller or arrange a meeting yourself.** Send the police the link, the screenshot and the serial number.
+- **Don't confront the seller or arrange a meeting yourself.** Send the police the link, the backup folder and the serial number.
 - File a police report if you haven't (in Switzerland: any Kantonspolizei post or online at [suisse-epolice.ch](https://www.suisse-epolice.ch)). Include the **serial numbers**. For a Mac, they're on the original box or invoice, or at [appleid.apple.com](https://appleid.apple.com) under Devices. For a camera, check the box, the invoice or old photos' EXIF data (many cameras record the body serial).
 - Report the listing to the marketplace as stolen goods.
 - For a laptop: mark it lost in Find My / Find My Device, which also shows when it comes online.
@@ -65,4 +106,4 @@ Searchlight puts all sites in one place and adds price and keyword filtering on 
 
 Tests: `pip install pytest && pytest`.
 
-Please keep the check interval sensible (the default is 20 minutes). It's your own personal search, done at human speed.
+Please keep the check interval sensible. It's your own personal search, done at human speed.

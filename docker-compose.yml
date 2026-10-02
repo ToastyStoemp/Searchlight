@@ -1,0 +1,8 @@
+services:
+  searchlight:
+    build: .
+    restart: unless-stopped
+    volumes:
+      - ./data:/data
+    # Chromium needs more shared memory than Docker's 64 MB default.
+    shm_size: "1gb"
