@@ -1,0 +1,63 @@
+# Copy this file to config.yaml and fill in your own items.
+
+# The things that were stolen. A listing counts as a match when every word of
+# at least one `keywords` phrase appears in it. Be specific (model numbers,
+# colours, sizes) to cut noise, and use `exclude` for common false positives.
+products:
+  - name: Laptop (MacBook Pro 14" M3, space black)
+    keywords:
+      - macbook pro 14 m3
+      - macbook pro m3 space black
+      - mbp 14 m3
+    queries:            # what is typed into each site's search box
+      - macbook pro m3
+      - macbook pro 14
+    exclude: [hülle, case, sleeve, ladegerät, charger, defekt gesucht, suche]
+    min_price: 300      # ignore accessories and "wanted" ads
+
+  - name: Camera (Sony A7 IV + 24-70)
+    keywords:
+      - sony a7 iv
+      - sony a7iv
+      - sony alpha 7 iv
+      - ilce 7m4
+    queries:
+      - sony a7 iv
+      - a7iv
+    exclude: [akku, battery, cage, gesucht]
+    min_price: 400
+
+# Sites to check. Built in: ricardo, tutti, anibis, facebook.
+enabled_sources: [ricardo, tutti, anibis, facebook]
+
+# Facebook Marketplace city slug, as in facebook.com/marketplace/<slug>/
+facebook_location: zurich
+
+interval_minutes: 20      # how often to check (each run is randomised ±20%)
+headless: false           # a visible browser gets far fewer captchas
+screenshot_matches: true  # save a full-page screenshot of each match (evidence)
+data_dir: ~/.searchlight  # database, browser profile, screenshots, report
+
+notify:
+  # Easiest: install the free "ntfy" app on your phone and subscribe to a
+  # long, hard-to-guess topic name. Anyone who knows the name can read it.
+  ntfy:
+    topic: searchlight-change-me-7f3k2q
+    # server: https://ntfy.sh
+  # telegram:
+  #   bot_token: "123456:ABC..."
+  #   chat_id: "123456789"
+  # email:
+  #   username: you@gmail.com
+  #   password: "app-password"     # Gmail needs an app password
+  #   to: you@gmail.com
+
+# Fix a site that changed its URLs, or add a new site, without editing code.
+# `link_pattern` must capture the listing id in group 1.
+# sources:
+#   ricardo:
+#     search_url: "https://www.ricardo.ch/fr/s/{query_path}?sort=newest"
+#   kleinanzeigen:
+#     search_url: "https://www.kleinanzeigen.de/s-{query_path}/k0"
+#     link_pattern: "/s-anzeige/[^/]+/(\\d+)"
+#     base_url: "https://www.kleinanzeigen.de"
